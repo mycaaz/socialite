@@ -130,7 +130,7 @@ private fun calculateNavigationLayoutType(
 }
 
 @Composable
-fun SocialiteNavSuite(
+fun socialiteNavSuite(
     navController: NavController,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,

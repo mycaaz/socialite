@@ -49,7 +49,7 @@ import com.google.android.samples.socialite.ui.home.chatlist.ChatList
 import com.google.android.samples.socialite.ui.home.settings.Settings
 import com.google.android.samples.socialite.ui.home.timeline.Timeline
 import com.google.android.samples.socialite.ui.navigation.Route
-import com.google.android.samples.socialite.ui.navigation.SocialiteNavSuite
+import com.google.android.samples.socialite.ui.navigation.socialiteNavSuite
 import com.google.android.samples.socialite.ui.photopicker.navigation.navigateToPhotoPicker
 import com.google.android.samples.socialite.ui.photopicker.navigation.photoPickerScreen
 import com.google.android.samples.socialite.ui.player.VideoPlayerScreen
@@ -84,7 +84,7 @@ fun MainNavigation(
         }
     }
 
-    SocialiteNavSuite(
+    socialiteNavSuite(
         navController = navController,
         modifier = modifier,
     ) {

@@ -37,7 +37,7 @@ import com.google.android.samples.socialite.widget.model.WidgetState.Loading
 import com.google.android.samples.socialite.widget.ui.FavoriteContact
 import com.google.android.samples.socialite.widget.ui.ZeroState
 
-class SociaLiteAppWidget : GlanceAppWidget() {
+class socialiteAppWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val repository = WidgetModelRepository.get(context)

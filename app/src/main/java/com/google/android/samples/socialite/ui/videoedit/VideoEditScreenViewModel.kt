@@ -149,7 +149,7 @@ class VideoEditScreenViewModel @Inject constructor(
                 .setEffects(Effects(listOf(), listOf(OverlayEffect(overlaysBuilder.build()))))
                 .build()
 
-        val editedVideoFileName = "Socialite-edited-recording-" +
+        val editedVideoFileName = "socialite-edited-recording-" +
             SimpleDateFormat(CameraViewModel.FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis()) + ".mp4"
 

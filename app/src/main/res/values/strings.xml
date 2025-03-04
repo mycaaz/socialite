@@ -1,77 +1,113 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright (C) 2023 The Android Open Source Project
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
--->
 <resources>
-    <string name="app_name">SociaLite</string>
+    <!-- App basics -->
+    <string name="app_name">BandConnect</string>
+    <string name="welcome_title">Welcome to BandConnect</string>
+    <string name="welcome_subtitle">Connect with your favorite bands</string>
 
-    <string name="timeline">Timeline</string>
-    <string name="chats">Chats</string>
-    <string name="settings">Settings</string>
+    <!-- Main Navigation -->
+    <string name="profile_title">Band Member Profile</string>
+    <string name="explore_title">Discover Artists</string>
+    <string name="event_feed_title">Band Updates</string>
+    <string name="chat_title">Conversations</string>
+    <string name="settings_title">Settings</string>
 
-    <!-- Timeline -->
-    <eat-comment/>
-    <string name="timeline_empty_title">No photos or video.</string>
-    <string name="timeline_empty_message">Videos and photos from messages will display here. Add a message or refine your search.</string>
+    <!-- Authentication -->
+    <string name="login">Sign In</string>
+    <string name="signup">Join the Community</string>
+    <string name="logout">Sign Out</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="name">Full Name</string>
+    <string name="username">Username</string>
 
-    <string name="show_as_bubble">Show as Bubble</string>
-    <string name="description_icon">Profile icon</string>
-    <string name="description_voice_call">Make a voice call (dummy)</string>
-    <string name="description_send">Send</string>
-    <string name="sender_you">You</string>
-    <string name="label_reply">Reply</string>
-    <string name="description_photo">Photo</string>
-    <string name="hint_input">Type a message…</string>
-    <string name="channel_new_messages">New messages</string>
-    <string name="channel_new_messages_description">All new incoming messages.</string>
-    <string name="chat_with_contact">Chat with %s</string>
-    <string name="voice_call_explanation">This is a dummy voice call screen.</string>
-    <string name="permission_message">To be notified when you have new messages, please grant the notification permission.</string>
-    <string name="permission_rationale">Please grant the notification permission so that the app can demonstrate usage of the Notification APIs.</string>
-    <string name="permission_grant">GRANT</string>
-    <string name="camera_permission_rationale">Taking photos and videos requires access to the camera and microphone.</string>
-    <string name="camera_permission_settings">Please go to your device\'s Settings and grant these permissions.</string>
-    <string name="camera_not_available">Camera not available.</string>
-    <string name="camera_not_ready">Camera not ready. Please wait.</string>
-    <string name="grant_permission">Grant permissions</string>
-    <string name="back">Back</string>
-    <string name="message">Message</string>
+    <!-- Profile Information -->
+    <string name="bio">Bio</string>
+    <string name="band_role">Role in Band</string>
+    <string name="instruments">Instruments</string>
+    <string name="experience">Years of Experience</string>
+    <string name="band_name">Band Name</string>
+    <string name="genre">Genre</string>
+    <string name="location">Location</string>
 
-    <!-- Settings -->
-    <eat-comment />
-    <string name="clear_message_history">Clear message history</string>
-    <string name="performance_class_level">This device is Media Performance Class level %1$d</string>
+    <!-- Features -->
+    <string name="share_location">Share Your Location</string>
+    <string name="message">Send a Message</string>
+    <string name="send_message">Message</string>
+    <string name="event_request">Request an Event</string>
+    <string name="feedback">Send Feedback</string>
+    <string name="admin_panel">Admin Panel</string>
 
-    <!-- Video Edit Screen -->
-    <string name="remove_audio">Remove audio</string>
+    <!-- User Types -->
+    <string name="fan_type">Fan Type</string>
+    <string name="casual_listener">Casual Listener</string>
+    <string name="dedicated_fan">Dedicated Fan</string>
+    <string name="superfan">Superfan</string>
+    <string name="quick_response">Quick Response</string>
+
+    <!-- Content Categories -->
+    <string name="members">Band Members</string>
+    <string name="updates">Latest Updates</string>
+    <string name="events">Upcoming Events</string>
+    <string name="albums">Albums</string>
+    <string name="merch">Merchandise</string>
+
+    <!-- Actions -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="share">Share</string>
+    <string name="view">View</string>
+    <string name="search">Search</string>
+    <string name="filter">Filter</string>
+    <string name="sort">Sort</string>
+
+    <!-- Preserved from socialite -->
+    <string name="notification_permission_title">Enable Notifications</string>
+    <string name="notification_permission_description">Stay updated with band announcements, messages from artists, and event notifications.</string>
+    <string name="notification_permission_button">Enable</string>
+    <string name="camera_permission_title">Enable Camera</string>
+    <string name="camera_permission_description">Capture moments at concerts and share them with the community.</string>
+    <string name="camera_permission_button">Enable</string>
+    <string name="location_permission_title">Enable Location</string>
+    <string name="location_permission_description">Find nearby events and share your location with band members.</string>
+    <string name="location_permission_button">Enable</string>
+    <string name="permission_required">Permission Required</string>
+    <string name="permission_rationale">This feature requires permission to work properly.</string>
+    <string name="go_to_settings">Go to Settings</string>
+    <string name="ok">OK</string>
+
+    <!-- Messages & Conversations -->
+    <string name="new_message">New Message</string>
+    <string name="reply">Reply</string>
+    <string name="typing">typing…</string>
+    <string name="online">Online</string>
+    <string name="offline">Offline</string>
+    <string name="message_hint">Type a message…</string>
     <string name="send">Send</string>
-    <string name="add_text_overlay_placeholder">Add text overlay</string>
-    <string name="red_text_option">Red</string>
-    <string name="large_text_option">Large</string>
+    <string name="attach">Attach</string>
+    <string name="conversations">Conversations</string>
+    <string name="no_conversations">No conversations yet</string>
+    <string name="no_messages">No messages yet</string>
 
-    <!--Control Button strings-->
-    <string name="play_title">Play</string>
-    <string name="pause_title">Pause</string>
-    <string name="ff_title">Fast forward</string>
-    <string name="rw_title">Rewind</string>
-    <string name="favorite_contact_widget_name">Favorite Contact</string>
-    <string name="ai_chatbot_setting">AI Chatbot</string>
-    <string name="ai_chatbot_setting_enabled">enabled</string>
-    <string name="ai_chatbot_setting_disabled">disabled</string>
-    <string name="set_api_key_toast">Please set your API key in local.properties</string>
-    <string name="gemini_error">Gemini error (%1$s)</string>
-    <string name="image_error">Can\'t open image</string>
-    <string name="unknown_error">Unknown error</string>
+    <!-- Posts and Content -->
+    <string name="post">Post</string>
+    <string name="create_post">Create Post</string>
+    <string name="post_hint">Share updates with your fans…</string>
+    <string name="post_type">Post Type</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="add_location">Add Location</string>
+    <string name="like">Like</string>
+    <string name="comment">Comment</string>
+    <string name="no_posts">No posts yet</string>
+    <string name="create_event">Create Event</string>
 
+    <!-- Admin Features -->
+    <string name="admin_dashboard">Admin Dashboard</string>
+    <string name="manage_posts">Manage Posts</string>
+    <string name="manage_events">Manage Events</string>
+    <string name="analytics">Analytics</string>
+    <string name="fan_insights">Fan Insights</string>
+    <string name="quick_reply_templates">Quick Reply Templates</string>
+    <string name="set_priority">Set as Priority</string>
 </resources>

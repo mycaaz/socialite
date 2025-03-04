@@ -1,59 +1,139 @@
-/*
- * Copyright (C) 2023 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.google.android.samples.socialite
 
-import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.glance.appwidget.updateAll
-import com.google.android.samples.socialite.ui.Main
-import com.google.android.samples.socialite.ui.ShortcutParams
-import com.google.android.samples.socialite.widget.SociaLiteAppWidget
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.google.android.samples.socialite.data.repository.UserRepository
+import com.google.android.samples.socialite.ui.navigation.BandConnectDestinations
+import com.google.android.samples.socialite.ui.navigation.BandConnectNavGraph
+import com.google.android.samples.socialite.ui.screens.admin.AdminPanelScreen
+import com.google.android.samples.socialite.ui.screens.chat.ConversationsScreen
+import com.google.android.samples.socialite.ui.screens.chat.MessageScreen
+import com.google.android.samples.socialite.ui.screens.discover.DiscoverBandMembersScreen
+import com.google.android.samples.socialite.ui.screens.main.MainScreen
+import com.google.android.samples.socialite.ui.screens.profile.BandMemberProfileScreen
+import com.google.android.samples.socialite.ui.screens.welcome.WelcomeScreen
+import com.google.android.samples.socialite.ui.theme.BandConnectTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
-        enableEdgeToEdge()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
-        super.onCreate(savedInstanceState)
-        runBlocking { SociaLiteAppWidget().updateAll(this@MainActivity) }
-        setContent {
-            Main(
-                shortcutParams = extractShortcutParams(intent),
-            )
-        }
-    }
 
-    private fun extractShortcutParams(intent: Intent?): ShortcutParams? {
-        if (intent == null || intent.action != Intent.ACTION_SEND) return null
-        val shortcutId = intent.getStringExtra(
-            ShortcutManagerCompat.EXTRA_SHORTCUT_ID,
-        ) ?: return null
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return null
-        return ShortcutParams(shortcutId, text)
+    @Inject
+    lateinit var userRepository: UserRepository
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            BandConnectTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colors.background
+                ) {
+                    val navController = rememberNavController()
+                    val currentUser by userRepository.currentUser.collectAsState(initial = null)
+
+                    // Use the main app flow if logged in, otherwise show authentication flow
+                    NavHost(
+                        navController = navController,
+                        startDestination = if (currentUser != null) "main" else "auth"
+                    ) {
+                        // Authentication flow
+                        composable("auth") {
+                            WelcomeScreen(
+                                onLoginClick = {
+                                    // In a real app, this would navigate to login
+                                    // For demo purposes, we'll simulate a login
+                                    navController.navigate("main") {
+                                        popUpTo("auth") { inclusive = true }
+                                    }
+                                },
+                                onSignupClick = {
+                                    // In a real app, this would navigate to signup
+                                    // For demo purposes, we'll simulate a login
+                                    navController.navigate("main") {
+                                        popUpTo("auth") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // Main app flow
+                        composable("main") {
+                            MainScreen(
+                                onNavigateToProfile = { bandMemberId ->
+                                    navController.navigate("profile/$bandMemberId")
+                                },
+                                onNavigateToMessage = { recipientId ->
+                                    navController.navigate("message/$recipientId")
+                                },
+                                onNavigateToAuth = {
+                                    navController.navigate("auth") {
+                                        popUpTo("main") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // Profile screen
+                        composable(
+                            "profile/{bandMemberId}",
+                            arguments = listOf(navArgument("bandMemberId") {
+                                defaultValue = ""
+                            })
+                        ) { backStackEntry ->
+                            val bandMemberId = backStackEntry.arguments?.getString("bandMemberId") ?: ""
+
+                            BandMemberProfileScreen(
+                                bandMemberId = bandMemberId,
+                                onBackClick = { navController.navigateUp() },
+                                onMessageClick = { recipientId ->
+                                    navController.navigate("message/$recipientId")
+                                },
+                                onShareLocationClick = { /* Handle location sharing */ }
+                            )
+                        }
+
+                        // Message screen
+                        composable(
+                            "message/{recipientId}",
+                            arguments = listOf(navArgument("recipientId") {
+                                defaultValue = ""
+                            })
+                        ) { backStackEntry ->
+                            val recipientId = backStackEntry.arguments?.getString("recipientId") ?: ""
+
+                            MessageScreen(
+                                recipientId = recipientId,
+                                onBackClick = { navController.navigateUp() },
+                                onShareLocationClick = { /* Handle location sharing */ }
+                            )
+                        }
+
+                        // Admin panel
+                        composable("admin") {
+                            AdminPanelScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onManagePostsClick = { /* Navigate to manage posts */ },
+                                onManageEventsClick = { /* Navigate to manage events */ },
+                                onFanInsightsClick = { /* Navigate to fan insights */ }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

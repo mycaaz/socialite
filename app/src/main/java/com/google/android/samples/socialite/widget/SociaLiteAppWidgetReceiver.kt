@@ -24,8 +24,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SociaLiteAppWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = SociaLiteAppWidget()
+class socialiteAppWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = socialiteAppWidget()
 
     @Inject
     lateinit var repository: WidgetModelRepository

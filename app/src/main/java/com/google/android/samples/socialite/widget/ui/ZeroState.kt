@@ -33,7 +33,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import com.google.android.samples.socialite.MainActivity
 import com.google.android.samples.socialite.R
-import com.google.android.samples.socialite.widget.SociaLiteAppWidgetConfigActivity
+import com.google.android.samples.socialite.widget.socialiteAppWidgetConfigActivity
 
 @Composable
 fun ZeroState(modifier: GlanceModifier = GlanceModifier, widgetId: Int) {
@@ -44,7 +44,7 @@ fun ZeroState(modifier: GlanceModifier = GlanceModifier, widgetId: Int) {
                 modifier = GlanceModifier.clickable(actionStartActivity(MainActivity::class.java)),
                 textColor = GlanceTheme.colors.onSurface,
                 startIcon = ImageProvider(R.drawable.ic_launcher_monochrome),
-                title = "SociaLite",
+                title = "socialite",
             )
         },
         backgroundColor = GlanceTheme.colors.widgetBackground,
@@ -53,7 +53,7 @@ fun ZeroState(modifier: GlanceModifier = GlanceModifier, widgetId: Int) {
         Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Button(
                 text = "Select Favorite Contact",
-                onClick = actionStartActivity<SociaLiteAppWidgetConfigActivity>(
+                onClick = actionStartActivity<socialiteAppWidgetConfigActivity>(
                     parameters = actionParametersOf(widgetIdKey to widgetId),
                 ),
             )

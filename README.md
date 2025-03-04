@@ -1,6 +1,6 @@
-# SociaLite: An Android Sample App
+# socialite: An Android Sample App
 
-SociaLite demonstrates how to use various Android platform APIs to implement features that
+socialite demonstrates how to use various Android platform APIs to implement features that
 are commonly seen in social network apps, leveraging a variety of
 [Jetpack APIs](https://developer.android.com/jetpack/getting-started) to achieve complex
 functionality that works reliably on more devices and requires less code. These are some of the
@@ -22,14 +22,14 @@ The app also integrates the Gemini API that powers chatbot capabilities:
 
 ## App Overview
 
-![Screenshots of SociaLite showing the Timeline Screen, the Chat List Screen, and the Chat Screen](docs/images/screenshots.png "SociaLite screenshots")
+![Screenshots of socialite showing the Timeline Screen, the Chat List Screen, and the Chat Screen](docs/images/screenshots.png "socialite screenshots")
 
-The main interaction in SociaLite centers around the animal avatars and their associated chat
+The main interaction in socialite centers around the animal avatars and their associated chat
 threads. When you send a message to one of these avatars, they will respond in 5 seconds. If you
 close the app within that time and you've granted notification permissions, you'll see a
 notification for that reply.
 
-Here are the screens that make up SociaLite:
+Here are the screens that make up socialite:
 
  - *Timeline Screen:* A vertical scrolling page of all of the photos and videos sent in chats.
  - *Chat List Screen:* A list of all the chat threads with a variety of animal personalities.
@@ -40,7 +40,7 @@ Here are the screens that make up SociaLite:
  - *Video Edit Screen:* After taking a video with the in-app camera, users can do some minor edits on this screen.
  - *Settings Screen:* A basic settings screen for tasks like resetting the chat history.
 
-## How to run SociaLite
+## How to run socialite
 
 1. Clone the repository
 2. Open the whole project in Android Studio.

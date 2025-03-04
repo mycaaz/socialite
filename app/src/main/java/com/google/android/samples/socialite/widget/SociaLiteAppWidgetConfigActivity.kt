@@ -59,7 +59,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
-class SociaLiteAppWidgetConfigActivity : ComponentActivity() {
+class socialiteAppWidgetConfigActivity : ComponentActivity() {
     @Inject
     lateinit var widgetModelRepository: WidgetModelRepository
 
@@ -106,7 +106,7 @@ class SociaLiteAppWidgetConfigActivity : ComponentActivity() {
                                                 false,
                                             ),
                                         )
-                                        SociaLiteAppWidget().updateAll(this@SociaLiteAppWidgetConfigActivity)
+                                        socialiteAppWidget().updateAll(this@socialiteAppWidgetConfigActivity)
                                         val resultValue = Intent().putExtra(
                                             AppWidgetManager.EXTRA_APPWIDGET_ID,
                                             appWidgetId,

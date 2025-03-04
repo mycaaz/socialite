@@ -20,8 +20,8 @@ import androidx.room.DatabaseView
 
 @DatabaseView(
     """
-    SELECT c.id, MAX(m.timestamp) as timestamp, m.text 
-    FROM Chat as c INNER JOIN Message as m on c.id = m.chatId 
+    SELECT c.id, MAX(m.timestamp) as timestamp, m.text
+    FROM Chat as c INNER JOIN Message as m on c.id = m.chatId
     GROUP BY c.id
 """,
 )

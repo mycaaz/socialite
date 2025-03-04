@@ -20,7 +20,7 @@ import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.google.android.samples.socialite.di.AppCoroutineScope
-import com.google.android.samples.socialite.widget.SociaLiteAppWidget
+import com.google.android.samples.socialite.widget.socialiteAppWidget
 import dagger.hilt.EntryPoint
 import dagger.hilt.EntryPoints
 import dagger.hilt.InstallIn
@@ -65,7 +65,7 @@ class WidgetModelRepository @Inject internal constructor(
         } else {
             widgetModelDao.update(model)
         }
-        SociaLiteAppWidget().updateAll(appContext)
+        socialiteAppWidget().updateAll(appContext)
         return widgetModelDao.loadWidgetModel(model.widgetId).first()
     }
 
@@ -78,7 +78,7 @@ class WidgetModelRepository @Inject internal constructor(
         coroutineScope.launch {
             val widgetManager = GlanceAppWidgetManager(context)
             val widgetIds =
-                widgetManager.getGlanceIds(SociaLiteAppWidget::class.java).map { glanceId ->
+                widgetManager.getGlanceIds(socialiteAppWidget::class.java).map { glanceId ->
                     widgetManager.getAppWidgetId(glanceId)
                 }.toList()
 
@@ -103,7 +103,7 @@ class WidgetModelRepository @Inject internal constructor(
                             unread,
                         ),
                     )
-                    SociaLiteAppWidget().updateAll(appContext)
+                    socialiteAppWidget().updateAll(appContext)
                 }
             }
         }

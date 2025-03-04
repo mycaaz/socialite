@@ -1,23 +1,31 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright (C) 2023 The Android Open Source Project
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
-
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Original socialite colors (preserved) -->
+    <color name="purple_200">#8C9EFF</color>
+    <color name="purple_500">#3D5AFE</color>
+    <color name="purple_700">#304FFE</color>
+    <color name="teal_200">#64FFDA</color>
+    <color name="teal_700">#00BFA5</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
 
-    <color name="light_purple">#FFECDCFF</color>
-    <color name="aqua">#FF7CD7BA</color>
-    <color name="dark_gray">#FF2C322F</color>
+    <!-- BandConnect theme colors -->
+    <color name="primary">#5D1049</color>
+    <color name="primary_variant">#3B0A2E</color>
+    <color name="secondary">#FF5722</color>
+    <color name="secondary_variant">#E64A19</color>
+    <color name="background">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="error">#CF6679</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#000000</color>
+    <color name="on_background">#FFFFFF</color>
+    <color name="on_surface">#FFFFFF</color>
+    <color name="on_error">#000000</color>
 
+    <!-- Additional accent colors -->
+    <color name="accent_purple">#9C27B0</color>
+    <color name="accent_blue">#2196F3</color>
+    <color name="accent_green">#4CAF50</color>
+    <color name="accent_yellow">#FFC107</color>
 </resources>

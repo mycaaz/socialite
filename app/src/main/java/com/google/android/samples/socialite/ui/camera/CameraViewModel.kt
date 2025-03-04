@@ -220,7 +220,7 @@ class CameraViewModel @Inject constructor(
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SociaLite")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/socialite")
             }
         }
 
@@ -258,14 +258,14 @@ class CameraViewModel @Inject constructor(
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startVideoCapture(onMediaCaptured: (Media) -> Unit) {
-        val name = "Socialite-recording-" +
+        val name = "socialite-recording-" +
             SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis()) + ".mp4"
         val contentValues = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/SociaLite")
+                put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/socialite")
             }
         }
         val context: Context = application
