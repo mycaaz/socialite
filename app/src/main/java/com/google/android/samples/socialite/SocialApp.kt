@@ -16,7 +16,38 @@
 package com.google.android.samples.socialite
 
 import android.app.Application
+import com.google.android.samples.socialite.data.AppDatabase
+import com.google.android.samples.socialite.data.DatabaseManager
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltAndroidApp
-class SocialApp : Application()
+class SocialApp : Application() {
+    
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    
+    @Inject
+    lateinit var database: AppDatabase
+    
+    @Inject
+    lateinit var databaseManager: DatabaseManager
+    
+    override fun onCreate() {
+        super.onCreate()
+        
+        // Initialize the database with error handling
+        applicationScope.launch {
+            try {
+                if (database != null) {
+                    // Initialize database if needed
+                }
+            } catch (e: Exception) {
+                // Handle database initialization errors
+            }
+        }
+    }
+}

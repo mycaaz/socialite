@@ -14,16 +14,25 @@
   ~ limitations under the License.
 -->
 <resources>
-    <string name="app_name">SociaLite</string>
+    <string name="app_name">BandSocial</string>
 
-    <string name="timeline">Timeline</string>
+    <string name="timeline">Music Discovery</string>
     <string name="chats">Chats</string>
     <string name="settings">Settings</string>
+    
+    <!-- Band-specific strings -->
+    <string name="concert_announcement">Concert Announcement</string>
+    <string name="view_concert_details">View Concert Details</string>
+    <string name="get_tickets">Get Tickets</string>
+    <string name="find_bands">Find Bands By Genre</string>
+    <string name="featured_bands">Featured Bands</string>
+    <string name="upcoming_concerts">Upcoming Concerts</string>
+    <string name="latest_band_media">Latest Band Media</string>
 
     <!-- Timeline -->
     <eat-comment/>
-    <string name="timeline_empty_title">No photos or video.</string>
-    <string name="timeline_empty_message">Videos and photos from messages will display here. Add a message or refine your search.</string>
+    <string name="timeline_empty_title">No band media yet.</string>
+    <string name="timeline_empty_message">Follow your favorite bands to see their performance videos and photos here.</string>
 
     <string name="show_as_bubble">Show as Bubble</string>
     <string name="description_icon">Profile icon</string>
@@ -52,6 +61,13 @@
     <eat-comment />
     <string name="clear_message_history">Clear message history</string>
     <string name="performance_class_level">This device is Media Performance Class level %1$d</string>
+    <string name="band_profile_settings">Band Profile</string>
+    <string name="concert_settings">Concert Settings</string>
+    <string name="admin_controls">Admin Controls</string>
+    <string name="enable_priority_notifications">Enable Priority Notifications for Bands</string>
+    <string name="reset_database">Reset Community Database</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="save_concert">Save Concert Info</string>
 
     <!-- Video Edit Screen -->
     <string name="remove_audio">Remove audio</string>
@@ -73,5 +89,5 @@
     <string name="gemini_error">Gemini error (%1$s)</string>
     <string name="image_error">Can\'t open image</string>
     <string name="unknown_error">Unknown error</string>
-
+    <string name="reply">Reply</string>
 </resources>

@@ -29,10 +29,13 @@ import com.google.android.samples.socialite.ui.Main
 import com.google.android.samples.socialite.ui.ShortcutParams
 import com.google.android.samples.socialite.widget.SociaLiteAppWidget
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val mainScope = MainScope()
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         enableEdgeToEdge()
@@ -40,7 +43,16 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         super.onCreate(savedInstanceState)
-        runBlocking { SociaLiteAppWidget().updateAll(this@MainActivity) }
+        
+        // Update widgets in the background instead of blocking the main thread
+        mainScope.launch {
+            try {
+                SociaLiteAppWidget().updateAll(this@MainActivity)
+            } catch (e: Exception) {
+                // Handle any exceptions to prevent app crashes
+            }
+        }
+        
         setContent {
             Main(
                 shortcutParams = extractShortcutParams(intent),

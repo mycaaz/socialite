@@ -20,20 +20,17 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.content.LocusIdCompat
 import androidx.core.content.getSystemService
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import com.google.android.samples.socialite.BubbleActivity
@@ -42,258 +39,295 @@ import com.google.android.samples.socialite.R
 import com.google.android.samples.socialite.ReplyReceiver
 import com.google.android.samples.socialite.model.Contact
 import com.google.android.samples.socialite.model.Message
+import com.google.android.samples.socialite.model.UserRole
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val PREFS_NAME = "SocialiteMusicBandPrefs"
+private const val KEY_PRIORITY_NOTIFICATIONS = "priority_notifications_enabled"
+
 /**
- * Represents a reason why a shortcut should be pushed.
+ * Notification channels for messages, depending on their priority and role
  */
-enum class PushReason {
-    IncomingMessage,
-    OutgoingMessage,
+enum class NotificationChannelType {
+    DEFAULT,
+    PRIORITY,  // For high-priority messages from band members
+    CONCERT    // For concert announcement notifications
 }
 
 /**
- * Handles all operations related to [Notification].
+ * Extension property to get the channel ID for each notification channel type
+ */
+private val NotificationChannelType.channelId: String
+    get() = when (this) {
+        NotificationChannelType.DEFAULT -> "messages"
+        NotificationChannelType.PRIORITY -> "priority_messages"
+        NotificationChannelType.CONCERT -> "concert_announcements"
+    }
+
+/**
+ * Handles all notification related work in one place.
  */
 @Singleton
-class NotificationHelper @Inject constructor(@ApplicationContext context: Context) {
+class NotificationHelper @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
 
     companion object {
         /**
-         * The notification channel for messages. This is used for showing Bubbles.
+         * The notification channel for messages.
          */
-        private const val CHANNEL_NEW_MESSAGES = "new_messages"
+        private const val CHANNEL_MESSAGES = "messages"
+        
+        /**
+         * The notification channel for priority messages from band members.
+         */
+        private const val CHANNEL_PRIORITY_MESSAGES = "priority_messages"
+        
+        /**
+         * The notification channel for concert announcements.
+         */
+        private const val CHANNEL_CONCERT_ANNOUNCEMENTS = "concert_announcements"
 
+        /**
+         * The request code for the reply action's PendingIntent.
+         */
         private const val REQUEST_CONTENT = 1
         private const val REQUEST_BUBBLE = 2
+
+        /**
+         * The request code for the "Reply" action's PendingIntent.
+         */
+        private const val REQUEST_REPLY = 0
+
+        /**
+         * The notification ID for the foreground conversation.
+         */
+        const val NOTIFICATION_ID = 1
     }
-
-    private val appContext = context.applicationContext
-
-    private val notificationManager: NotificationManager =
-        context.getSystemService() ?: throw IllegalStateException()
-
-    fun setUpNotificationChannels() {
-        if (Build.VERSION.SDK_INT < 26) {
-            return
-        }
-        if (notificationManager.getNotificationChannel(CHANNEL_NEW_MESSAGES) == null) {
-            notificationManager.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_NEW_MESSAGES,
-                    appContext.getString(R.string.channel_new_messages),
-                    // The importance must be IMPORTANCE_HIGH to show Bubbles.
-                    NotificationManager.IMPORTANCE_HIGH,
-                ).apply {
-                    description = appContext.getString(R.string.channel_new_messages_description)
-                },
-            )
-        }
+    
+    // Shared Preferences for various settings
+    private val prefs: SharedPreferences by lazy {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
+    
+    // Check if priority notifications are enabled
+    private fun arePriorityNotificationsEnabled(): Boolean = 
+        prefs.getBoolean(KEY_PRIORITY_NOTIFICATIONS, false)
 
-    private fun Contact.toShortcut(
-        additional: ShortcutInfoCompat.Builder.() -> ShortcutInfoCompat.Builder = { this },
-    ): ShortcutInfoCompat {
-        val icon = IconCompat.createWithAdaptiveBitmap(
-            appContext.resources.assets.open(icon).use { input ->
-                BitmapFactory.decodeStream(input)
-            },
-        )
-        return ShortcutInfoCompat.Builder(appContext, shortcutId)
-            .setLocusId(LocusIdCompat(shortcutId))
-            .setActivity(ComponentName(appContext, MainActivity::class.java))
-            .setShortLabel(name)
-            .setIcon(icon)
-            .setLongLived(true)
-            .setCategories(hashSetOf("com.google.android.samples.socialite.category.SHARE_TARGET"))
-            .setIntent(
-                Intent(appContext, MainActivity::class.java)
-                    .setAction(Intent.ACTION_VIEW)
-                    .setData(contentUri),
-            )
-            .setPerson(
-                Person.Builder()
-                    .setName(name)
+    /**
+     * Creates a messaging style notification for a message from the specified [contact].
+     */
+    fun showNotification(contact: Contact, message: Message, fromUser: Boolean) {
+        try {
+            val shortcutId = contact.shortcutId
+            val chatId = message.chatId
+
+            // Create/update the notification.
+            val notificationManager = context.getSystemService<NotificationManager>()
+            if (notificationManager != null) {
+                // Determine notification channel based on role and priority
+                val channelType = determineNotificationChannel(contact)
+                
+                // Create notification channels
+                createNotificationChannels(notificationManager)
+
+                val icon = loadContactIcon(contact)
+                val person = Person.Builder()
+                    .setName(contact.name)
                     .setIcon(icon)
-                    .build(),
+                    .build()
+                val messagingStyle = NotificationCompat.MessagingStyle(person)
+                    .addMessage(message.text, message.timestamp, person)
+                    .setGroupConversation(false)
+                    .setConversationTitle(contact.name)
+
+                val builder = NotificationCompat.Builder(context, channelType.channelId)
+                    .setCategory(Notification.CATEGORY_MESSAGE)
+                    .setShowWhen(true)
+                    .setStyle(messagingStyle)
+                    .setShortcutId(shortcutId)
+                    .setLocusId(LocusIdCompat(shortcutId))
+                    .setSmallIcon(R.drawable.ic_message)
+                    .setBubbleMetadata(
+                        NotificationCompat.BubbleMetadata.Builder(
+                            createBubbleIntent(contact),
+                            icon,
+                        )
+                            .setDesiredHeight(600)
+                            .setSuppressNotification(fromUser)
+                            .build(),
+                    )
+                    .addAction(createReplyAction(chatId))
+
+                // Add priority flags for band member notifications if enabled
+                if (channelType == NotificationChannelType.PRIORITY) {
+                    builder.priority = NotificationCompat.PRIORITY_HIGH
+                    builder.setVibrate(longArrayOf(0, 300, 300, 300))
+                }
+                
+                // Create custom notification for concert announcements
+                if (channelType == NotificationChannelType.CONCERT && contact.upcomingConcert.isNotEmpty()) {
+                    builder
+                        .setContentTitle("Concert Announcement: ${contact.name}")
+                        .setContentText(message.text)
+                        .setStyle(NotificationCompat.BigTextStyle().bigText(message.text))
+                        .addAction(createViewConcertAction(contact))
+                }
+
+                notificationManager.notify(NOTIFICATION_ID, builder.build())
+            }
+        } catch (e: Exception) {
+            // Log the error or handle it gracefully
+            // We don't want to crash if notification building fails
+        }
+    }
+    
+    /**
+     * Determines which notification channel to use based on contact role and message content
+     */
+    private fun determineNotificationChannel(contact: Contact): NotificationChannelType {
+        // Check if the contact is a band member and priority notifications are enabled
+        if (contact.role == UserRole.BAND_MEMBER && arePriorityNotificationsEnabled()) {
+            return NotificationChannelType.PRIORITY
+        }
+        
+        // Check if this is a concert announcement
+        if (contact.hasUpcomingConcert()) {
+            return NotificationChannelType.CONCERT
+        }
+        
+        // Default channel for regular messages
+        return NotificationChannelType.DEFAULT
+    }
+    
+    /**
+     * Creates an action to view concert details
+     */
+    private fun createViewConcertAction(contact: Contact): NotificationCompat.Action {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra("CONTACT_ID", contact.id)
+            putExtra("VIEW_CONCERT", true)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            REQUEST_CONTENT,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Action.Builder(
+            R.drawable.ic_launcher_foreground,
+            "View Concert Details",
+            pendingIntent
+        ).build()
+    }
+
+    /**
+     * Creates a PendingIntent that opens up the bubble.
+     */
+    private fun createBubbleIntent(contact: Contact): PendingIntent {
+        val chatBubbleIntent = Intent(context, BubbleActivity::class.java)
+            .setAction(Intent.ACTION_VIEW)
+            .setData(
+                "https://socialite.google.com/chat/${contact.id}".toUri(),
             )
-            .additional()
+        return PendingIntent.getActivity(
+            context,
+            REQUEST_BUBBLE,
+            chatBubbleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * Creates a reply action for the specified [chatId].
+     */
+    private fun createReplyAction(chatId: Long): NotificationCompat.Action {
+        val replyIntent = Intent(context, ReplyReceiver::class.java)
+            .setAction(ReplyReceiver.ACTION_REPLY)
+            .putExtra(ReplyReceiver.EXTRA_CHAT_ID, chatId.toString())
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            REQUEST_REPLY,
+            replyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+        )
+
+        val remoteInput = RemoteInput.Builder(ReplyReceiver.EXTRA_TEXT_REPLY)
+            .setLabel(context.getString(R.string.label_reply))
+            .build()
+
+        return NotificationCompat.Action.Builder(
+            R.drawable.ic_send,
+            context.getString(R.string.label_reply),
+            replyPendingIntent,
+        )
+            .addRemoteInput(remoteInput)
+            .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+            .setShowsUserInterface(false)
             .build()
     }
 
-    @WorkerThread
-    fun pushShortcut(contact: Contact, reason: PushReason? = null) {
-        ShortcutManagerCompat.pushDynamicShortcut(
-            appContext,
-            contact.toShortcut {
-                when (reason) {
-                    PushReason.IncomingMessage -> {
-                        addCapabilityBinding("actions.intent.RECEIVE_MESSAGE")
-                    }
-
-                    PushReason.OutgoingMessage -> {
-                        addCapabilityBinding("actions.intent.SEND_MESSAGE")
-                    }
-
-                    else -> this
+    /**
+     * Creates notification channels for different types of notifications
+     */
+    private fun createNotificationChannels(notificationManager: NotificationManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                // Default channel
+                val defaultChannel = NotificationChannel(
+                    NotificationChannelType.DEFAULT.channelId,
+                    "Messages",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Regular messages from users"
                 }
-            },
-        )
-    }
-
-    private fun flagUpdateCurrent(mutable: Boolean): Int {
-        return if (mutable) {
-            if (Build.VERSION.SDK_INT >= 31) {
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        }
-    }
-
-    @WorkerThread
-    fun showNotification(
-        contact: Contact,
-        messages: List<Message>,
-        fromUser: Boolean,
-        update: Boolean = false,
-    ) {
-        val icon = IconCompat.createWithAdaptiveBitmapContentUri(contact.iconUri)
-        val user = Person.Builder().setName(appContext.getString(R.string.sender_you)).build()
-        val person = Person.Builder().setName(contact.name).setIcon(icon).build()
-
-        val pendingIntent = PendingIntent.getActivity(
-            appContext,
-            REQUEST_BUBBLE,
-            // Launch BubbleActivity as the expanded bubble.
-            Intent(appContext, BubbleActivity::class.java)
-                .setAction(Intent.ACTION_VIEW)
-                .setData(contact.contentUri),
-            flagUpdateCurrent(mutable = true),
-        )
-        // Let's add some more content to the notification in case it falls back to a normal
-        // notification.
-        val messagingStyle = NotificationCompat.MessagingStyle(user)
-        val firstId = messages.first().id
-        for (message in messages.reversed()) {
-            val m = NotificationCompat.MessagingStyle.Message(
-                message.text,
-                message.timestamp,
-                if (message.isIncoming) person else null,
-            ).apply {
-                if (message.mediaUri != null) {
-                    setData(message.mediaMimeType, message.mediaUri.toUri())
+                
+                // Priority channel for band members
+                val priorityChannel = NotificationChannel(
+                    NotificationChannelType.PRIORITY.channelId,
+                    "Priority Messages",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "High priority messages from band members"
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 300, 300, 300)
                 }
-            }
-            if (message.id == firstId) {
-                messagingStyle.addMessage(m)
-            } else {
-                messagingStyle.addHistoricMessage(m)
+                
+                // Concert announcements channel
+                val concertChannel = NotificationChannel(
+                    NotificationChannelType.CONCERT.channelId,
+                    "Concert Announcements",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Upcoming concert announcements"
+                    enableVibration(true)
+                }
+                
+                notificationManager.createNotificationChannels(
+                    listOf(defaultChannel, priorityChannel, concertChannel)
+                )
+            } catch (e: Exception) {
+                // Handle channel creation errors
             }
         }
-
-        val builder = NotificationCompat.Builder(appContext, CHANNEL_NEW_MESSAGES)
-            // A notification can be shown as a bubble by calling setBubbleMetadata()
-            .setBubbleMetadata(
-                NotificationCompat.BubbleMetadata.Builder(pendingIntent, icon)
-                    // The height of the expanded bubble.
-                    .setDesiredHeight(
-                        appContext.resources.getDimensionPixelSize(R.dimen.bubble_height),
-                    )
-                    .apply {
-                        // When the bubble is explicitly opened by the user, we can show the bubble
-                        // automatically in the expanded state. This works only when the app is in
-                        // the foreground.
-                        if (fromUser) {
-                            setAutoExpandBubble(true)
-                        }
-                        if (fromUser || update) {
-                            setSuppressNotification(true)
-                        }
-                    }
-                    .build(),
-            )
-            // The user can turn off the bubble in system settings. In that case, this notification
-            // is shown as a normal notification instead of a bubble. Make sure that this
-            // notification works as a normal notification as well.
-            .setContentTitle(contact.name)
-            .setSmallIcon(R.drawable.ic_message)
-            .setCategory(Notification.CATEGORY_MESSAGE)
-            .setShortcutId(contact.shortcutId)
-            // This ID helps the intelligence services of the device to correlate this notification
-            // with the corresponding dynamic shortcut.
-            .setLocusId(LocusIdCompat(contact.shortcutId))
-            .addPerson(person)
-            .setShowWhen(true)
-            // The content Intent is used when the user clicks on the "Open Content" icon button on
-            // the expanded bubble, as well as when the fall-back notification is clicked.
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    appContext,
-                    REQUEST_CONTENT,
-                    Intent(appContext, MainActivity::class.java)
-                        .setAction(Intent.ACTION_VIEW)
-                        .setData(contact.contentUri),
-                    flagUpdateCurrent(mutable = false),
-                ),
-            )
-            // Direct Reply
-            .addAction(
-                NotificationCompat.Action
-                    .Builder(
-                        IconCompat.createWithResource(appContext, R.drawable.ic_send),
-                        appContext.getString(R.string.label_reply),
-                        PendingIntent.getBroadcast(
-                            appContext,
-                            REQUEST_CONTENT,
-                            Intent(appContext, ReplyReceiver::class.java)
-                                .setData(contact.contentUri),
-                            flagUpdateCurrent(mutable = true),
-                        ),
-                    )
-                    .addRemoteInput(
-                        RemoteInput.Builder(ReplyReceiver.KEY_TEXT_REPLY)
-                            .setLabel(appContext.getString(R.string.hint_input))
-                            .build(),
-                    )
-                    .setAllowGeneratedReplies(true)
-                    .build(),
-            )
-            // Let's add some more content to the notification in case it falls back to a normal
-            // notification.
-            .setStyle(messagingStyle)
-            .setWhen(messages.last().timestamp)
-        // Don't sound/vibrate if an update to an existing notification.
-        if (update) {
-            builder.setOnlyAlertOnce(true)
-        }
-        notificationManager.notify(contact.id.toInt(), builder.build())
     }
 
-    fun dismissNotification(chatId: Long) {
-        notificationManager.cancel(chatId.toInt())
-    }
-
-    fun canBubble(contact: Contact): Boolean {
-        if (Build.VERSION.SDK_INT < 30) return false
-        val channel = notificationManager.getNotificationChannel(
-            CHANNEL_NEW_MESSAGES,
-            contact.shortcutId,
-        )
-        return notificationManager.areBubblesEnabledCompat() || channel?.canBubble() == true
-    }
-
-    @RequiresApi(29)
-    private fun NotificationManager.areBubblesEnabledCompat(): Boolean {
-        return if (Build.VERSION.SDK_INT >= 31) {
-            areBubblesEnabled()
-        } else {
-            @Suppress("DEPRECATION")
-            areBubblesAllowed()
+    /**
+     * Loads an icon for the [contact].
+     * Falls back to the app icon if there's any issue with contact icons.
+     */
+    private fun loadContactIcon(contact: Contact): IconCompat {
+        try {
+            // Try to load the contact's icon, but if it fails, fall back to the app icon
+            val icon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+            return IconCompat.createWithAdaptiveBitmap(icon)
+        } catch (e: Exception) {
+            // If anything goes wrong, use the app icon
+            val appIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+            return IconCompat.createWithAdaptiveBitmap(appIcon)
         }
     }
 }

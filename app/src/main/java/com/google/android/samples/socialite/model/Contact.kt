@@ -21,11 +21,21 @@ import androidx.core.net.toUri
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+/**
+ * User role enumeration for the music band community app
+ * ADMIN - Special role with administrative privileges
+ * BAND_MEMBER - Musicians in bands
+ * FAN - Regular users who follow bands
+ */
+enum class UserRole {
+    ADMIN, BAND_MEMBER, FAN
+}
+
 private val replyModels = mapOf<String, Contact.(String) -> Message.Builder>(
-    "cat" to { _ -> buildReply { this.text = "Meow" } },
+    "cat" to { _ -> buildReply { this.text = "Hi there! Need help with band promotion or community announcements? Let me know!" } },
     "dog" to { _ ->
         buildReply {
-            this.text = "Check out the Top 3 Modern Android Development Announcements from I/O '23!"
+            this.text = "Check out our latest music video from our concert at Madison Square Garden!"
             mediaUri = "content://com.google.android.samples.socialite/video/mad_io23_recap.mp4"
             mediaMimeType = "video/mp4"
         }
@@ -33,7 +43,7 @@ private val replyModels = mapOf<String, Contact.(String) -> Message.Builder>(
     "parrot" to { text -> buildReply { this.text = text } },
     "sheep" to { _ ->
         buildReply {
-            this.text = "Look at me!"
+            this.text = "Just got tickets to the Feathered Notes show! So excited!"
             mediaUri = "content://com.google.android.samples.socialite/photo/sheep_full.jpg"
             mediaMimeType = "image/jpeg"
         }
@@ -49,13 +59,63 @@ data class Contact(
     val name: String,
     val icon: String,
     val replyModel: String,
+    val role: UserRole = UserRole.FAN,
+    val bandName: String = "",
+    val instrument: String = "",
+    val genre: String = "",
+    val bio: String = "",
+    val location: String = "",
+    val upcomingConcert: String = "",
 ) {
     companion object {
         val CONTACTS = listOf(
-            Contact(1L, "Cat", "cat.jpg", "cat"),
-            Contact(2L, "Dog", "dog.jpg", "dog"),
-            Contact(3L, "Parrot", "parrot.jpg", "parrot"),
-            Contact(4L, "Sheep", "sheep.jpg", "sheep"),
+            // Admin
+            Contact(
+                id = 1L, 
+                name = "BandManager", 
+                icon = "cat.jpg", 
+                replyModel = "cat", 
+                role = UserRole.ADMIN,
+                bandName = "Admins",
+                bio = "I manage the community and help with band promotion."
+            ),
+            // Band members
+            Contact(
+                id = 2L, 
+                name = "RockDog", 
+                icon = "dog.jpg", 
+                replyModel = "dog", 
+                role = UserRole.BAND_MEMBER,
+                bandName = "Barking Mad",
+                instrument = "Guitar",
+                genre = "Rock",
+                bio = "Lead guitarist with a passion for classic rock",
+                location = "Nashville, TN",
+                upcomingConcert = "Sep 15, 2025 - The Ryman Auditorium"
+            ),
+            // More band members
+            Contact(
+                id = 3L, 
+                name = "JazzParrot", 
+                icon = "parrot.jpg", 
+                replyModel = "parrot", 
+                role = UserRole.BAND_MEMBER,
+                bandName = "Feathered Notes",
+                instrument = "Saxophone",
+                genre = "Jazz",
+                bio = "Award-winning saxophonist with 10 years experience",
+                location = "New Orleans, LA"
+            ),
+            // Fan
+            Contact(
+                id = 4L, 
+                name = "CountrySheep", 
+                icon = "sheep.jpg", 
+                replyModel = "sheep", 
+                role = UserRole.FAN,
+                bio = "Huge fan of country and bluegrass music",
+                location = "Austin, TX"
+            ),
         )
     }
 
@@ -67,6 +127,24 @@ data class Contact(
 
     val shortcutId: String
         get() = "$SHORTCUT_PREFIX$id"
+        
+    /**
+     * Check if the contact has administrative privileges
+     * @return true if the contact is an admin
+     */
+    fun isAdmin(): Boolean = role == UserRole.ADMIN
+    
+    /**
+     * Check if the contact is a band member
+     * @return true if the contact is a band member
+     */
+    fun isBandMember(): Boolean = role == UserRole.BAND_MEMBER
+    
+    /**
+     * Check if the contact has an upcoming concert
+     * @return true if the contact has an upcoming concert scheduled
+     */
+    fun hasUpcomingConcert(): Boolean = upcomingConcert.isNotEmpty()
 
     fun buildReply(body: Message.Builder.() -> Unit) = Message.Builder().apply {
         senderId = this@Contact.id

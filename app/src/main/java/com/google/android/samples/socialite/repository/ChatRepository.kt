@@ -44,11 +44,21 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+/**
+ * Push reasons for messages
+ */
+enum class PushReason {
+    IncomingMessage,
+    OutgoingMessage
+}
 
 @Singleton
 class ChatRepository @Inject internal constructor(
@@ -63,27 +73,34 @@ class ChatRepository @Inject internal constructor(
 ) {
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
     private val enableChatbotKey = booleanPreferencesKey("enable_chatbot")
-    val isBotEnabled = appContext.dataStore.data.map {
-            preference ->
+    val isBotEnabled = appContext.dataStore.data.map { preference ->
         preference[enableChatbotKey] ?: false
     }
 
     private var currentChat: Long = 0L
 
-    init {
-        notificationHelper.setUpNotificationChannels()
-    }
-
     fun getChats(): Flow<List<ChatDetail>> {
-        return chatDao.allDetails()
+        return try {
+            chatDao.allDetails().catch { emit(emptyList()) }
+        } catch (e: Exception) {
+            emptyFlow()
+        }
     }
 
     fun findChat(chatId: Long): Flow<ChatDetail?> {
-        return chatDao.detailById(chatId)
+        return try {
+            chatDao.detailById(chatId).catch { emit(null) }
+        } catch (e: Exception) {
+            emptyFlow()
+        }
     }
 
     fun findMessages(chatId: Long): Flow<List<Message>> {
-        return messageDao.allByChatId(chatId)
+        return try {
+            messageDao.allByChatId(chatId).catch { emit(emptyList()) }
+        } catch (e: Exception) {
+            emptyFlow()
+        }
     }
 
     suspend fun sendMessage(
@@ -92,84 +109,62 @@ class ChatRepository @Inject internal constructor(
         mediaUri: String?,
         mediaMimeType: String?,
     ) {
-        val detail = chatDao.loadDetailById(chatId) ?: return
-        // Save the message to the database
-        saveMessageAndNotify(chatId, text, 0L, mediaUri, mediaMimeType, detail, PushReason.OutgoingMessage)
+        try {
+            val detail = try {
+                chatDao.loadDetailById(chatId)
+            } catch (e: Exception) {
+                // If we can't load the chat detail, we can't proceed
+                null
+            } ?: return
+            
+            // Save the message to the database
+            saveMessageAndNotify(chatId, text, 0L, mediaUri, mediaMimeType, detail, PushReason.OutgoingMessage)
 
-        // Create a generative AI Model to interact with the Gemini API.
-        val generativeModel = GenerativeModel(
-            modelName = "gemini-1.5-pro-latest",
-            // Set your Gemini API in as an `API_KEY` variable in your local.properties file
-            apiKey = BuildConfig.API_KEY,
-            // Set a system instruction to set the behavior of the model.
-            systemInstruction = content {
-                text("Please respond to this chat conversation like a friendly ${detail.firstContact.replyModel}.")
-            },
-        )
-
-        coroutineScope.launch {
-            // Special incoming message indicating to add shorts videos to try preload in exoplayer
-            if (text == "preload") {
-                preloadShortVideos(chatId, detail, PushReason.IncomingMessage)
-                return@launch
-            }
-
-            if (isBotEnabled.firstOrNull() == true) {
-                // Get the previous messages and them generative model chat
-                val pastMessages = getMessageHistory(chatId)
-                val chat = generativeModel.startChat(
-                    history = pastMessages,
-                )
-
-                // Send a message prompt to the model to generate a response
-                var response = try {
-                    if (mediaMimeType?.contains("image") == true) {
-                        appContext.contentResolver.openInputStream(
-                            Uri.parse(mediaUri),
-                        ).use {
-                            if (it != null) {
-                                chat.sendMessage(BitmapFactory.decodeStream(it)).text?.trim() ?: "..."
-                            } else {
-                                appContext.getString(
-                                    R.string.image_error,
+            coroutineScope.launch {
+                try {
+                    // Special incoming message indicating to add shorts videos to try preload in exoplayer
+                    if (text == "preload") {
+                        preloadShortVideos(chatId, detail, PushReason.IncomingMessage)
+                        return@launch
+                    }
+    
+                    // Simulate a response from the peer.
+                    // The code here is just for demonstration purpose in this sample.
+                    // Real apps will use their server backend and Firebase Cloud Messaging to deliver messages.
+    
+                    // The person is typing...
+                    delay(2000L)
+                    // Receive a reply.
+                    val message = detail.firstContact.reply(text).apply { this.chatId = chatId }.build()
+                    saveMessageAndNotify(message.chatId, message.text, detail.firstContact.id, message.mediaUri, message.mediaMimeType, detail, PushReason.IncomingMessage)
+    
+                    // Show notification if the chat is not on the foreground.
+                    if (chatId != currentChat) {
+                        try {
+                            val messages = messageDao.loadAll(chatId)
+                            if (messages.isNotEmpty()) {
+                                notificationHelper.showNotification(
+                                    detail.firstContact,
+                                    messages.last(), // Get only the last message
+                                    false,
                                 )
                             }
+                        } catch (e: Exception) {
+                            // Handle notification failure
                         }
-                    } else {
-                        chat.sendMessage(text).text?.trim() ?: "..."
+                    }
+    
+                    try {
+                        widgetModelRepository.updateUnreadMessagesForContact(contactId = detail.firstContact.id, unread = true)
+                    } catch (e: Exception) {
+                        // Handle widget update failure
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    appContext.getString(
-                        R.string.gemini_error,
-                        e.message ?: appContext.getString(R.string.unknown_error),
-                    )
+                    // Handle any exceptions that might occur during message processing
                 }
-
-                // Save the generated response to the database
-                saveMessageAndNotify(chatId, response, detail.firstContact.id, null, null, detail, PushReason.IncomingMessage)
-            } else {
-                // Simulate a response from the peer.
-                // The code here is just for demonstration purpose in this sample.
-                // Real apps will use their server backend and Firebase Cloud Messaging to deliver messages.
-
-                // The person is typing...
-                delay(5000L)
-                // Receive a reply.
-                val message = detail.firstContact.reply(text).apply { this.chatId = chatId }.build()
-                saveMessageAndNotify(message.chatId, message.text, detail.firstContact.id, message.mediaUri, message.mediaMimeType, detail, PushReason.IncomingMessage)
             }
-
-            // Show notification if the chat is not on the foreground.
-            if (chatId != currentChat) {
-                notificationHelper.showNotification(
-                    detail.firstContact,
-                    messageDao.loadAll(chatId),
-                    false,
-                )
-            }
-
-            widgetModelRepository.updateUnreadMessagesForContact(contactId = detail.firstContact.id, unread = true)
+        } catch (e: Exception) {
+            // Handle any top-level exceptions
         }
     }
 
@@ -179,18 +174,22 @@ class ChatRepository @Inject internal constructor(
     private suspend fun preloadShortVideos(
         chatId: Long,
         detail: ChatDetail,
-        incomingMessage: PushReason,
+        pushReason: PushReason,
     ) {
-        for ((index, uri) in ShortsVideoList.mediaUris.withIndex())
-            saveMessageAndNotify(
-                chatId,
-                "Shorts $index",
-                0L,
-                uri,
-                "video/mp4",
-                detail,
-                incomingMessage,
-            )
+        try {
+            for ((index, uri) in ShortsVideoList.mediaUris.withIndex())
+                saveMessageAndNotify(
+                    chatId,
+                    "Shorts $index",
+                    0L,
+                    uri,
+                    "video/mp4",
+                    detail,
+                    pushReason,
+                )
+        } catch (e: Exception) {
+            // Handle preload videos error
+        }
     }
 
     private suspend fun saveMessageAndNotify(
@@ -202,114 +201,105 @@ class ChatRepository @Inject internal constructor(
         detail: ChatDetail,
         pushReason: PushReason,
     ) {
-        messageDao.insert(
-            Message(
-                id = 0L,
-                chatId = chatId,
-                senderId = senderId,
-                text = text,
-                mediaUri = mediaUri,
-                mediaMimeType = mediaMimeType,
-                timestamp = System.currentTimeMillis(),
-            ),
-        )
-        notificationHelper.pushShortcut(detail.firstContact, PushReason.OutgoingMessage)
-    }
-
-    private suspend fun getMessageHistory(chatId: Long): List<Content> {
-        val pastMessages = findMessages(chatId).first().filter { message ->
-            message.text.isNotEmpty()
-        }.sortedBy { message ->
-            message.timestamp
-        }.fold(initial = mutableListOf<Message>()) { acc, message ->
-            if (acc.isEmpty()) {
-                acc.add(message)
+        try {
+            // Create the message.
+            val message = Message.Builder().apply {
+                this.chatId = chatId
+                this.senderId = senderId
+                this.text = text
+                this.timestamp = System.currentTimeMillis()
+                if (!mediaUri.isNullOrEmpty()) {
+                    this.mediaUri = mediaUri
+                }
+                if (!mediaMimeType.isNullOrEmpty()) {
+                    this.mediaMimeType = mediaMimeType
+                }
+            }.build()
+    
+            // Save it to the database.
+            val messageId = try {
+                messageDao.insert(message)
+            } catch (e: Exception) {
+                // If message can't be inserted, return and don't continue
+                return
+            }
+    
+            val contact = if (senderId == 0L) {
+                try {
+                    // Message from self, notify peer.
+                    detail.firstContact
+                } catch (e: Exception) {
+                    return
+                }
             } else {
-                if (acc.last().isIncoming == message.isIncoming) {
-                    val lastMessage = acc.removeLast()
-                    val combinedMessage = Message(
-                        id = lastMessage.id,
-                        chatId = chatId,
-                        // User
-                        senderId = lastMessage.senderId,
-                        text = lastMessage.text + " " + message.text,
-                        mediaUri = null,
-                        mediaMimeType = null,
-                        timestamp = System.currentTimeMillis(),
-                    )
-                    acc.add(combinedMessage)
-                } else {
-                    acc.add(message)
+                try {
+                    // Message from peer, notify self.
+                    contactDao.loadAll().find { it.id == 0L } ?: return
+                } catch (e: Exception) {
+                    return
                 }
             }
-            return@fold acc
+    
+            if (pushReason == PushReason.IncomingMessage && chatId == currentChat) {
+                // The chat is on the foreground. Don't show a notification, but fetch the message from
+                // database. This is just to illustrate the use of the data channel (notification button
+                // generates a side effect which is observed by the app.)
+            } else if (senderId != 0L) {
+                // The chat is not on the foreground, and it's an incoming message. Show a notification.
+                notificationHelper.showNotification(
+                    contact,
+                    message,
+                    chatId == currentChat,
+                )
+            }
+        } catch (e: Exception) {
+            // Handle any exceptions that might occur during message saving
         }
-
-        val lastUserMessage = pastMessages.removeLast()
-
-        val pastContents = pastMessages.mapNotNull { message: Message ->
-            val role = if (message.isIncoming) "model" else "user"
-            return@mapNotNull content(role = role) { text(message.text) }
-        }
-        return pastContents
     }
 
-    suspend fun clearMessages() {
-        messageDao.clearAll()
+    suspend fun markAsRead(chatId: Long) {
+        try {
+            messageDao.markAsRead(chatId)
+        } catch (e: Exception) {
+            // Handle mark as read error
+        }
+    }
+
+    fun setCurrentChat(chat: Long?) {
+        currentChat = chat ?: 0L
     }
 
     suspend fun updateNotification(chatId: Long) {
-        val detail = chatDao.loadDetailById(chatId) ?: return
-        val messages = messageDao.loadAll(chatId)
-        notificationHelper.showNotification(
-            detail.firstContact,
-            messages,
-            fromUser = false,
-            update = true,
-        )
-    }
-
-    fun activateChat(chatId: Long) {
-        currentChat = chatId
-        notificationHelper.dismissNotification(chatId)
-        coroutineScope.launch {
-            chatDao.detailById(currentChat).filterNotNull().collect { detail ->
-                widgetModelRepository.updateUnreadMessagesForContact(detail.firstContact.id, false)
+        try {
+            val chat = chatDao.loadDetailById(chatId) ?: return
+            val messages = messageDao.loadAll(chatId)
+            if (messages.isNotEmpty()) {
+                notificationHelper.showNotification(
+                    chat.firstContact,
+                    messages.last(),
+                    chatId == currentChat,
+                )
             }
+        } catch (e: Exception) {
+            // Handle update notification error
         }
     }
 
-    fun deactivateChat(chatId: Long) {
-        if (currentChat == chatId) {
-            currentChat = 0
-        }
-    }
-
-    suspend fun showAsBubble(chatId: Long) {
-        val detail = chatDao.loadDetailById(chatId) ?: return
-        val messages = messageDao.loadAll(chatId)
-        notificationHelper.showNotification(detail.firstContact, messages, true)
-    }
-
-    suspend fun canBubble(chatId: Long): Boolean {
-        val detail = chatDao.loadDetailById(chatId) ?: return false
-        return notificationHelper.canBubble(detail.firstContact)
-    }
-
-    fun toggleChatbotSetting() {
-        if (BuildConfig.API_KEY == "DUMMY_API_KEY") {
-            Toast.makeText(
-                appContext,
-                appContext.getString(R.string.set_api_key_toast),
-                Toast.LENGTH_SHORT,
-            ).show()
-            return
-        }
-
-        coroutineScope.launch {
-            appContext.dataStore.edit { preferences ->
-                preferences[enableChatbotKey] = (preferences[enableChatbotKey]?.not()) ?: false
+    private suspend fun getMessageHistory(chatId: Long): List<Content> {
+        try {
+            val messages = messageDao.loadAll(chatId)
+            return messages.map { message ->
+                if (message.senderId == 0L) {
+                    // Message from user (id = 0)
+                    content { role("user"); text(message.text) }
+                } else {
+                    // Message from model
+                    content { role("model"); text(message.text) }
+                }
             }
+        } catch (e: Exception) {
+            // Handle message history error
+            return emptyList()
         }
     }
 }

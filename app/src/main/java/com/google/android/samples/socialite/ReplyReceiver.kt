@@ -35,16 +35,23 @@ class ReplyReceiver : BroadcastReceiver() {
 
     @Inject
     lateinit var repository: ChatRepository
+    
     companion object {
         const val KEY_TEXT_REPLY = "reply"
+        const val ACTION_REPLY = "com.google.android.samples.socialite.ACTION_REPLY"
+        const val EXTRA_CHAT_ID = "com.google.android.samples.socialite.EXTRA_CHAT_ID"
+        const val EXTRA_TEXT_REPLY = "com.google.android.samples.socialite.EXTRA_TEXT_REPLY"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val results = RemoteInput.getResultsFromIntent(intent) ?: return
         // The message typed in the notification reply.
-        val input = results.getCharSequence(KEY_TEXT_REPLY)?.toString()
-        val uri = intent.data ?: return
-        val chatId = uri.lastPathSegment?.toLong() ?: return
+        val input = results.getCharSequence(EXTRA_TEXT_REPLY)?.toString()
+        
+        // Get chatId from various sources
+        val chatId = intent.getStringExtra(EXTRA_CHAT_ID)?.toLongOrNull()
+            ?: intent.data?.lastPathSegment?.toLongOrNull()
+            ?: return
 
         if (chatId > 0 && !input.isNullOrBlank()) {
             val pendingResult = goAsync()

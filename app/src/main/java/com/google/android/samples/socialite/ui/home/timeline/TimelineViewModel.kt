@@ -34,6 +34,8 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.android.samples.socialite.data.ContactDao
+import com.google.android.samples.socialite.model.UserRole
 import com.google.android.samples.socialite.repository.ChatRepository
 import com.google.android.samples.socialite.ui.player.preloadmanager.PreloadManagerWrapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,9 +49,16 @@ import kotlinx.coroutines.launch
 class TimelineViewModel @Inject constructor(
     @ApplicationContext private val application: Context,
     private val repository: ChatRepository,
+    private val contactDao: ContactDao
 ) : ViewModel() {
     // List of videos and photos from chats
     var media by mutableStateOf<List<TimelineMediaItem>>(emptyList())
+    
+    // List of upcoming concerts to show
+    var upcomingConcerts by mutableStateOf<List<ConcertInfo>>(emptyList())
+    
+    // List of featured bands
+    var featuredBands by mutableStateOf<List<BandInfo>>(emptyList())
 
     // Single player instance - in the future, we can implement a pool of players to improve
     // latency and allow for concurrent playback
@@ -88,24 +97,71 @@ class TimelineViewModel @Inject constructor(
     }
 
     init {
+        loadFeaturedBands()
+        loadUpcomingConcerts()
+        loadMedia()
+    }
+    
+    private fun loadFeaturedBands() {
+        viewModelScope.launch {
+            // Get all band members
+            val bandMembers = contactDao.getAllBandMembers()
+            
+            featuredBands = bandMembers.map { contact ->
+                BandInfo(
+                    id = contact.id,
+                    name = contact.name,
+                    bandName = contact.bandName,
+                    genre = contact.genre,
+                    iconUri = contact.iconUri,
+                    bio = contact.bio
+                )
+            }
+        }
+    }
+    
+    private fun loadUpcomingConcerts() {
+        viewModelScope.launch {
+            // Get contacts with upcoming concerts
+            val contactsWithConcerts = contactDao.getContactsWithUpcomingConcerts()
+            
+            upcomingConcerts = contactsWithConcerts.map { contact ->
+                ConcertInfo(
+                    bandId = contact.id,
+                    bandName = contact.bandName.ifEmpty { contact.name },
+                    concertDetails = contact.upcomingConcert,
+                    location = contact.location,
+                    iconUri = contact.iconUri
+                )
+            }
+        }
+    }
+    
+    private fun loadMedia() {
         viewModelScope.launch {
             val allChats = repository.getChats().first()
             val newList = mutableListOf<TimelineMediaItem>()
             for (chatDetail in allChats) {
-                val messages = repository.findMessages(chatDetail.chatWithLastMessage.id).first()
-                for (message in messages) {
-                    if (message.mediaUri != null) {
-                        newList += TimelineMediaItem(
-                            uri = message.mediaUri,
-                            type = if (message.mediaMimeType?.contains("video") == true) {
-                                TimelineMediaType.VIDEO
-                            } else {
-                                TimelineMediaType.PHOTO
-                            },
-                            timestamp = message.timestamp,
-                            chatName = chatDetail.firstContact.name,
-                            chatIconUri = chatDetail.firstContact.iconUri,
-                        )
+                // Only include media from band members for the timeline
+                val isBandMember = chatDetail.firstContact.role == UserRole.BAND_MEMBER
+                
+                if (isBandMember) {
+                    val messages = repository.findMessages(chatDetail.chatWithLastMessage.id).first()
+                    for (message in messages) {
+                        if (message.mediaUri != null) {
+                            newList += TimelineMediaItem(
+                                uri = message.mediaUri,
+                                type = if (message.mediaMimeType?.contains("video") == true) {
+                                    TimelineMediaType.VIDEO
+                                } else {
+                                    TimelineMediaType.PHOTO
+                                },
+                                timestamp = message.timestamp,
+                                chatName = chatDetail.firstContact.bandName.ifEmpty { chatDetail.firstContact.name },
+                                chatIconUri = chatDetail.firstContact.iconUri,
+                                bandDescription = "Genre: ${chatDetail.firstContact.genre}"
+                            )
+                        }
                     }
                 }
             }
@@ -210,4 +266,46 @@ class TimelineViewModel @Inject constructor(
             }
         }
     }
+    
+    /**
+     * Search for bands by genre
+     */
+    fun searchBandsByGenre(genre: String) {
+        viewModelScope.launch {
+            val bandsByGenre = contactDao.getContactsByGenre(genre)
+            featuredBands = bandsByGenre.filter { it.role == UserRole.BAND_MEMBER }.map { contact ->
+                BandInfo(
+                    id = contact.id,
+                    name = contact.name,
+                    bandName = contact.bandName,
+                    genre = contact.genre,
+                    iconUri = contact.iconUri,
+                    bio = contact.bio
+                )
+            }
+        }
+    }
 }
+
+/**
+ * Represents a band in the community
+ */
+data class BandInfo(
+    val id: Long,
+    val name: String,
+    val bandName: String,
+    val genre: String,
+    val iconUri: Uri,
+    val bio: String
+)
+
+/**
+ * Represents upcoming concert information
+ */
+data class ConcertInfo(
+    val bandId: Long,
+    val bandName: String,
+    val concertDetails: String,
+    val location: String,
+    val iconUri: Uri
+)

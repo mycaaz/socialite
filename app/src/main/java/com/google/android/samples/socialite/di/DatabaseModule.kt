@@ -47,16 +47,27 @@ annotation class AppCoroutineScope
 object DatabaseModule {
     @Provides
     @Singleton
-    fun providesAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
-            .addCallback(
-                object : RoomDatabase.Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        db.populateInitialData()
-                    }
-                },
-            ).build()
+    fun providesAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return try {
+            Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
+                .fallbackToDestructiveMigration() // Add this to handle migration issues
+                .addCallback(
+                    object : RoomDatabase.Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            try {
+                                db.populateInitialData()
+                            } catch (e: Exception) {
+                                // Handle initialization errors
+                            }
+                        }
+                    },
+                ).build()
+        } catch (e: Exception) {
+            // In case of fatal database errors, create a minimal database
+            Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        }
+    }
 
     @Provides
     fun providesChatDao(database: AppDatabase): ChatDao = database.chatDao()

@@ -25,6 +25,7 @@ import com.google.android.samples.socialite.model.Chat
 import com.google.android.samples.socialite.model.ChatAttendee
 import com.google.android.samples.socialite.model.Contact
 import com.google.android.samples.socialite.model.Message
+import com.google.android.samples.socialite.model.UserRole
 import com.google.android.samples.socialite.widget.model.WidgetModel
 import com.google.android.samples.socialite.widget.model.WidgetModelDao
 
@@ -62,6 +63,13 @@ fun SupportSQLiteDatabase.populateInitialData() {
             put("icon", "you.jpg")
             put("name", "You")
             put("replyModel", "")
+            put("role", UserRole.FAN.ordinal)
+            put("bio", "Music enthusiast looking for new bands to follow")
+            put("location", "Your Location")
+            put("bandName", "")
+            put("instrument", "")
+            put("genre", "")
+            put("upcomingConcert", "")
         },
     )
 
@@ -79,6 +87,13 @@ fun SupportSQLiteDatabase.populateInitialData() {
                 put("icon", contact.icon)
                 put("name", contact.name)
                 put("replyModel", contact.replyModel)
+                put("role", contact.role.ordinal)
+                put("bandName", contact.bandName)
+                put("instrument", contact.instrument)
+                put("genre", contact.genre)
+                put("bio", contact.bio)
+                put("location", contact.location)
+                put("upcomingConcert", contact.upcomingConcert)
             },
         )
 
@@ -103,7 +118,7 @@ fun SupportSQLiteDatabase.populateInitialData() {
 
         val now = System.currentTimeMillis()
 
-        // Add first message
+        // Add first message with music-themed content
         insert(
             table = "Message",
             conflictAlgorithm = SQLiteDatabase.CONFLICT_NONE,
@@ -112,7 +127,14 @@ fun SupportSQLiteDatabase.populateInitialData() {
                 put("id", (index * 2).toLong())
                 put("chatId", chatIds[index])
                 put("senderId", contact.id)
-                put("text", "Send me a message")
+                
+                // Custom message based on role
+                when (contact.role) {
+                    UserRole.ADMIN -> put("text", "Welcome to the Music Band Community! I'm here to help you connect with your favorite bands.")
+                    UserRole.BAND_MEMBER -> put("text", "Hey fans! Send me a message to learn about our upcoming shows and new releases!")
+                    UserRole.FAN -> put("text", "I just discovered an amazing band! Anyone want to chat about music?")
+                }
+                
                 put("timestamp", now + chatIds[index])
             },
         )

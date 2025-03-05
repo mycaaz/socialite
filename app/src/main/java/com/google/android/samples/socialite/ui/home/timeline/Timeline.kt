@@ -22,28 +22,52 @@ import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +79,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
@@ -86,26 +111,346 @@ fun Timeline(
     val media = viewModel.media
     val player = viewModel.player
     val videoRatio = viewModel.videoRatio
+    val upcomingConcerts = viewModel.upcomingConcerts
+    val featuredBands = viewModel.featuredBands
+    
+    var genreSearchQuery by remember { mutableStateOf("") }
+    
     Scaffold(
         modifier = modifier,
         topBar = {
-            HomeAppBar(title = stringResource(TopLevelDestination.Timeline.label))
+            HomeAppBar(title = "Music Discovery") // Changed from generic "Timeline"
         },
     ) { contentPadding ->
         HomeBackground(modifier = Modifier.fillMaxSize())
-        if (media.isEmpty()) {
-            EmptyTimeline(contentPadding, modifier)
-        } else {
-            TimelineVerticalPager(
-                contentPadding,
-                Modifier,
-                media,
-                player,
-                viewModel::initializePlayer,
-                viewModel::releasePlayer,
-                viewModel::changePlayerItem,
-                videoRatio,
+        
+        LazyColumn(
+            contentPadding = contentPadding,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Genre search section
+            item {
+                SearchSection(
+                    query = genreSearchQuery,
+                    onQueryChange = { genreSearchQuery = it },
+                    onSearch = { viewModel.searchBandsByGenre(genreSearchQuery) }
+                )
+            }
+            
+            // Featured Bands Section
+            item {
+                SectionTitle(title = "Featured Bands")
+            }
+            
+            item {
+                if (featuredBands.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(featuredBands) { band ->
+                            BandCard(
+                                bandInfo = band,
+                                modifier = Modifier.width(160.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No bands found. Try another genre.")
+                    }
+                }
+            }
+            
+            // Divider
+            item {
+                Divider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp, horizontal = 32.dp)
+                )
+            }
+            
+            // Upcoming Concerts Section
+            item {
+                SectionTitle(title = "Upcoming Concerts")
+            }
+            
+            item {
+                if (upcomingConcerts.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(upcomingConcerts) { concert ->
+                            ConcertCard(
+                                concertInfo = concert,
+                                modifier = Modifier.width(250.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No upcoming concerts scheduled")
+                    }
+                }
+            }
+            
+            // Divider
+            item {
+                Divider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp, horizontal = 32.dp)
+                )
+            }
+            
+            // Music Media Section
+            item {
+                SectionTitle(title = "Latest Band Media")
+            }
+            
+            item {
+                if (media.isEmpty()) {
+                    EmptyTimeline(modifier = Modifier.padding(32.dp))
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(450.dp)
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        TimelineVerticalPager(
+                            PaddingValues(0.dp),
+                            Modifier,
+                            media,
+                            player,
+                            viewModel::initializePlayer,
+                            viewModel::releasePlayer,
+                            viewModel::changePlayerItem,
+                            videoRatio,
+                        )
+                    }
+                }
+            }
+            
+            // Spacer at the bottom
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchSection(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Find bands by genre",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Rock, Jazz, Pop...") },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null
+                    )
+                }
             )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Button(onClick = onSearch) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BandCard(
+    bandInfo: BandInfo,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column {
+            // Band Image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(bandInfo.iconUri)
+                    .build(),
+                contentDescription = "Band image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Band Info
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = bandInfo.bandName.ifEmpty { bandInfo.name },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = "Genre: ${bandInfo.genre}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = bandInfo.bio,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ConcertCard(
+    concertInfo: ConcertInfo,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column {
+            // Concert Header with Band Image
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Band Icon
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(concertInfo.iconUri)
+                        .build(),
+                    contentDescription = "Band icon",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.onPrimaryContainer, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Text(
+                    text = concertInfo.bandName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            // Concert Details
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = concertInfo.concertDetails,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Location with icon
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Text(
+                        text = concertInfo.location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // View Details Button
+                Button(
+                    onClick = { /* Navigate to concert details */ },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
+                ) {
+                    Text("Get Tickets")
+                }
+            }
         }
     }
 }
@@ -194,7 +539,10 @@ fun TimelineVerticalPager(
                     videoRatio,
                 )
 
-                MetadataOverlay(modifier = Modifier.padding(16.dp), mediaItem = mediaItems[page])
+                BandMediaOverlay(
+                    modifier = Modifier.padding(16.dp), 
+                    mediaItem = mediaItems[page]
+                )
             }
         }
     }
@@ -242,7 +590,7 @@ fun TimelinePage(
 }
 
 @Composable
-fun MetadataOverlay(modifier: Modifier, mediaItem: TimelineMediaItem) {
+fun BandMediaOverlay(modifier: Modifier, mediaItem: TimelineMediaItem) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -284,38 +632,90 @@ fun MetadataOverlay(modifier: Modifier, mediaItem: TimelineMediaItem) {
             }
         }
 
-        Row(
+        // Band Info Box
+        Column(
             modifier = Modifier
                 .padding(16.dp)
                 .align(Alignment.BottomStart)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
+                .padding(12.dp),
         ) {
-            mediaItem.chatIconUri?.let {
-                Image(
-                    painter = rememberIconPainter(contentUri = it),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.LightGray),
+            // Title row with icon
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                mediaItem.chatIconUri?.let {
+                    Image(
+                        painter = rememberIconPainter(contentUri = it),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.LightGray),
+                    )
+                }
+                
+                Column {
+                    Text(
+                        text = mediaItem.chatName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    // Genre info
+                    if (mediaItem.bandDescription.isNotEmpty()) {
+                        Text(
+                            text = mediaItem.bandDescription,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+            
+            // Concert location if available
+            if (mediaItem.concertLocation.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Text(
+                        text = mediaItem.concertLocation,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            
+            // Media title if available
+            if (mediaItem.mediaTitle.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = mediaItem.mediaTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
                 )
             }
-            Text(modifier = Modifier.padding(end = 16.dp), text = mediaItem.chatName)
         }
     }
 }
 
 @Composable
 fun EmptyTimeline(
-    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
-            .padding(contentPadding)
             .padding(64.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -325,12 +725,12 @@ fun EmptyTimeline(
             contentDescription = null,
         )
         Text(
-            text = stringResource(R.string.timeline_empty_title),
-            modifier = Modifier.padding(top = 64.dp),
+            text = "No Band Media Yet",
+            modifier = Modifier.padding(top = 16.dp),
             style = MaterialTheme.typography.titleLarge,
         )
         Text(
-            text = stringResource(R.string.timeline_empty_message),
+            text = "Follow your favorite bands to see their performance videos and photos here",
             textAlign = TextAlign.Center,
         )
     }

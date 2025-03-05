@@ -24,6 +24,9 @@ data class TimelineMediaItem(
     val timestamp: Long,
     val chatName: String,
     val chatIconUri: Uri?,
+    val bandDescription: String = "", // Added for band information
+    val concertLocation: String = "", // Added for concert locations
+    val mediaTitle: String = ""       // Title for the media item (e.g., "Live at Madison Square Garden")
 )
 
 enum class TimelineMediaType {
