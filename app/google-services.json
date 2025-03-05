@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "809083874716",
+    "project_id": "grootygroot-6ab49",
+    "storage_bucket": "grootygroot-6ab49.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809083874716:android:a71632a38556acd8b0ec59",
+        "android_client_info": {
+          "package_name": "com.bandconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASeyANibthqjzHLegqazPZInsk6X9QHMw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
